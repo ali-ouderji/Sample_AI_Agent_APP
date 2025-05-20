@@ -43,6 +43,7 @@ Install dependencies using:
 
 ```bash
 pip install -r requirements.txt
+```
 
 ## Details about the python codes and model architecture:
 
@@ -77,9 +78,7 @@ Agent Architecture
 The AI agent is constructed using RunnableWithMessageHistory, enabling conversational memory across user interactions.
 
 Prompt Structure:
-python
-Copy
-Edit
+```
 prompt = ChatPromptTemplate.from_messages([
     SystemMessagePromptTemplate.from_template(
         """SYSTEM PROMPT HERE"""
@@ -88,7 +87,9 @@ prompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder(variable_name="agent_scratchpad"),
     HumanMessagePromptTemplate.from_template("{input}"),
 ])
+```
 
 - agent_scratchpad provides visibility into how the LLM uses tools and forms its chain of thought.
+
 
 
