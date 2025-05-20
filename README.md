@@ -6,6 +6,8 @@ This project is an AI-powered rental inquiry assistant for forklift hire busines
 
 # The architecture of the agent
 
+The following image shows the workflow of the Retrieval-Augmented Generation (RAG) application generated for this project. A user submits a natural language query, which is used to perform a semantic search against a Pinecone vector database. Relevant document chunks are retrieved and passed along with the original query to an OpenAI LLM. The LLM invokes tools as required and generates a final response based on both the retrieved context and user input.
+
 ![image](https://github.com/user-attachments/assets/0cc44ac6-3a7a-4107-8af2-4dcb0329b403)
 
 
