@@ -4,6 +4,11 @@
 
 This project is an AI-powered rental inquiry assistant for forklift hire businesses. It guides clients through the quoting process by asking some questions and matching the request to the most suitable forklift based on lifting specs, site conditions, and availability.
 
+# The architecture of the agent
+
+![image](https://github.com/user-attachments/assets/0cc44ac6-3a7a-4107-8af2-4dcb0329b403)
+
+
 ---
 
 ## What It Does
