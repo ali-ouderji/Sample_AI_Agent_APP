@@ -15,10 +15,6 @@ import re
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-# Memory for storing finalized output
-final_answers = {}
-maximum_load = {}
-
 def parse_weight_to_tons(text: str) -> float:
     """
     Extracts weight from input text and converts it to tons.
@@ -41,7 +37,6 @@ def parse_weight_to_tons(text: str) -> float:
 @tool
 def print_finish(data: str) -> str:
     """Finalize the forklift rental request. Data should be a structured summary string."""
-    final_answers["result"] = data
     return f"✅ Rental info captured and ready: {data}"
 
 @tool
@@ -64,8 +59,6 @@ def get_max_lifting_weight(text: str) -> float | str:
         match = re.search(pattern, text.lower())
         if match:
             max_load = match.group(1)
-            maximum_load['max_load'] = max_load
-            print(max_load)
             return max_load
 
     return "No maximum lifting weight found in the input."
@@ -87,25 +80,25 @@ After reciving user query do the following tasks one by one:
 - First task: check if user query contain the following answers:
 
 1) Maximum lifting weight?
-What is the heaviest load you wll need to lift? Sample User Answer: 2t 
+“What is the heaviest load you wll need to lift?” Sample User Answer: 2t 
 
 2) Maximum load size?
-Roughly what are the maximum load dimensions? (Length x Width x Height) Sample User Answer: 1200x1200x1000
+“Roughly what are the maximum load dimensions? (Length x Width x Height)” Sample User Answer: 1200x1200x1000
 
 3) Indoor, outdoor, or both?
-Will you be using the forklift indoors, outdoors, or a mix of both? Sample User Answer: Both 
+“Will you be using the forklift indoors, outdoors, or a mix of both?” Sample User Answer: Both 
 
 4) Ground conditions?
-Is the ground flat and sealed, or will you be on gravel, dirt, or uneven surfaces? Sample User Answer: sealed surface 
+“Is the ground flat and sealed, or will you be on gravel, dirt, or uneven surfaces?” Sample User Answer: sealed surface 
 
 5) Turning space or access limits?
-Are there any tight turning areas, low clearances, or confined spaces we should know about?  Sample User Answer: my turning radius cant be more than 2150mm quite a tight spot 
+“Are there any tight turning areas, low clearances, or confined spaces we should know about?”  Sample User Answer: my turning radius cant be more than 2150mm quite a tight spot 
 
 6) Rental duration?
-How long do you need the forklift for? (e.g., 1 week, 1 month, ongoing) Sample User Answer: 3 months 
+“How long do you need the forklift for? (e.g., 1 week, 1 month, ongoing)” Sample User Answer: 3 months 
 
 7) Delivery location?
-Where are you located or where do you need the machine delivered to? Sample User Answer: Perth Bibra Lake just around the corner
+“Where are you located or where do you need the machine delivered to?” Sample User Answer: Perth Bibra Lake just around the corner
 
 - Second task: summerize the answers if all are availble. Otherwise, ask the above questions from the user in one message 
   and then make sure you have all information (answers to all questions). 
@@ -123,7 +116,9 @@ IMPORTANT: Once all required answers are collected, call the `print_finish` tool
 agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
 
 # Executor
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+agent_executor = AgentExecutor(agent=agent, tools=tools, 
+                               verbose=True, max_iterations=3,
+                               return_intermediate_steps=True)
 
 # Memory
 chat_map = {}
@@ -139,4 +134,3 @@ agent_with_history = RunnableWithMessageHistory(
     input_messages_key="input",
     history_messages_key="history"
 )
-
