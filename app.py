@@ -1,8 +1,8 @@
 import os
 import json
 import streamlit as st
-from rental_agent_v2 import agent_with_history, parse_weight_to_tons
-from create_vector_db_and_qa_chain_v2 import get_vector_db, create_qa_chain_with_memory
+from rental_agent import agent_with_history, parse_weight_to_tons
+from create_vector_db_and_qa_chain import get_vector_db, create_qa_chain_with_memory
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import ChatOpenAI
