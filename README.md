@@ -1,4 +1,4 @@
-# Sample_AI_Agent_APP
+# Sample AI Agent APP
 
 # Rental Coordinator AI Agent
 
