@@ -1,13 +1,20 @@
 import os
 import json
 import streamlit as st
-from rental_agent import agent_with_history, maximum_load, parse_weight_to_tons, final_answers
-from create_vector_db_and_qa_chain import get_vector_db, create_qa_chain_with_memory
+from rental_agent_v2 import agent_with_history, parse_weight_to_tons
+from create_vector_db_and_qa_chain_v2 import get_vector_db, create_qa_chain_with_memory
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import ChatOpenAI
+import random
 
 
+# Create a random number to be used for the agent memory
+if "seed" not in st.session_state:
+    st.session_state.seed = 42
+
+random.seed(st.session_state.seed)
+random_session_number = random.randint(10**49, 10**50 - 1)
 
 # configuring streamlit page settings
 st.set_page_config(page_title="Chani.AI Agent - Forklift Rental Assistant", layout="centered")
@@ -17,8 +24,8 @@ st.markdown("Your AI-powered agent to help you specify and book the right forkli
 
 # initialize chat session in streamlit if not already present
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
+    st.session_state.chat_history = []   
+     
 # display chat history
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
@@ -34,21 +41,11 @@ if user_prompt:
 
     # send user's message to GPT-4o and get a response
     response = agent_with_history.invoke(
-    {"input": user_prompt},
+    {"input": user_prompt,
+     "agent_scratchpad": []},
     # "I want a forklift for 3 months, 2t load, 1200x1200x1000, sealed surface, turning radius 2150mm, indoor and outdoor use"
-    config={"session_id": "abc_456"}
+    config={"session_id": f"ABC-{random_session_number}"}
     )
-    final_answer = final_answers.get("result")
-    # print("Agent response:", response)
-    # print("Final collected info for Streamlit:", final_answers.get("result"))
-
-    # response = openai.chat.completions.create(
-    #    model="gpt-4o",
-    #    messages=[
-    #        {"role": "system", "content": "You are a helpful assistant"},
-    #        *st.session_state.chat_history
-    #    ]
-    #    )
 
     assistant_response = response['output']
     st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})
@@ -57,13 +54,24 @@ if user_prompt:
     with st.chat_message("assistant"):
         st.markdown(assistant_response)
 
-    if final_answer is not None:
-        st.markdown(final_answer)    
-  
-    if maximum_load:
-        max_load = maximum_load.get('max_load') 
-        max_load_float = parse_weight_to_tons(max_load)
-        st.markdown(f'🏋️**The maximum lifting weight is {max_load_float} ton.**') 
+    action_output = {}
+    for i, (action, output) in enumerate(response.get("intermediate_steps", [])):
+        # st.markdown(f"**Step {i+1}: Tool `{action.tool}`**")
+        # st.code(f"Input: {action.tool_input}\nOutput: {output}")
+        action_output[str(action.tool)] = output
+    
+    # st.markdown(action_output)    
+
+    if ('print_finish' in action_output.keys()) and action_output['print_finish']:
+        st.markdown(action_output['print_finish']) 
+        st.session_state.chat_history.append({"role": "assistant", "content": action_output['print_finish']})
+           
+    
+    if ('get_max_lifting_weight' in action_output.keys()) and action_output['get_max_lifting_weight']:
+        max_load_float = parse_weight_to_tons(action_output['get_max_lifting_weight'])
+        weight_message = f'🏋️**The maximum lifting weight is {max_load_float} ton.**'
+        st.markdown(weight_message) 
+        st.session_state.chat_history.append({"role": "assistant", "content": weight_message})
         
         # Get the previously created vector store (pinecone database)
         vector_db = get_vector_db()
@@ -100,7 +108,7 @@ if user_prompt:
             template=prompt_template, input_variables=["context", "chat_history", "question"]
         )
 
-        LLM = ChatOpenAI(model_name="gpt-4", temperature=0) # no creativity we want to be accurate (temp=0)
+        LLM = ChatOpenAI(model_name="gpt-4o", temperature=0) # no creativity we want to be accurate (temp=0)
 
         MEMORY = ConversationBufferMemory(
                                 memory_key="chat_history",
@@ -108,15 +116,21 @@ if user_prompt:
                                 output_key='answer')
 
         # Create question-answering chain with memory
-        qa_chain_with_memory = create_qa_chain_with_memory(vectorstore=vector_db, memory=MEMORY, 
+        qa_chain_with_memory = create_qa_chain_with_memory(vectorstore=vector_db, 
+                                                           memory=MEMORY, 
                                                            llm=LLM, prompt=PROMPT)
 
         # First query
         query = f""" A recommended forklif with a quote for that given the following info and specifications:
-                        {final_answer}. The maximum lifting weight is {max_load_float} ton"""
+                        {action_output['print_finish']}. The maximum lifting weight is {max_load_float} ton"""
         answer = qa_chain_with_memory.invoke({'question':query, 
                                               'chat_history': MEMORY.chat_memory.messages})
         
         recommended_forklif = answer['answer']
         st.markdown(recommended_forklif) 
+        st.session_state.chat_history.append({"role": "assistant", "content": recommended_forklif})
 
+        st.session_state.seed = st.session_state.seed + 10
+        action_output = {}
+
+    
